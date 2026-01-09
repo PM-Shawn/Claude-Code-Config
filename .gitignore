@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Config files with sensitive data
+config.json
+token-stats.json
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# Temp scripts
+take_screenshots.py
+test_write.js

@@ -1,0 +1,2490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Config - 可视化配置管理器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #18181b;
+      --primary-light: #3f3f46;
+      --primary-dark: #000000;
+      --primary-bg: #f4f4f5;
+      --secondary: #52525b;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --success: #22c55e;
+      --success-bg: #f0fdf4;
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --text-primary: #18181b;
+      --text-secondary: #71717a;
+      --text-muted: #a1a1aa;
+      --bg-primary: #fafafa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f4f4f5;
+      --sidebar-bg: #ffffff;
+      --border: #e4e4e7;
+      --border-light: #f4f4f5;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-primary);
+      min-height: 100vh;
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+    }
+
+    /* 侧边栏布局 */
+    .app-layout {
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 10;
+    }
+
+    .sidebar-header {
+      padding: 24px 24px 32px;
+    }
+
+    .sidebar-header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sidebar-header h1::before {
+      content: '';
+      display: block;
+      width: 20px;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 4px;
+    }
+
+    .nav-menu {
+      flex: 1;
+      padding: 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item {
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--bg-tertiary);
+      color: var(--primary);
+      font-weight: 600;
+      border-color: var(--border);
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 1.5;
+    }
+
+    .sidebar-footer {
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* 主内容区域 */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 40px;
+      max-width: 1000px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .page-desc {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .skills-section-header {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .skills-section-header .btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 500;
+      padding: 0;
+      box-shadow: none;
+      min-width: auto;
+    }
+
+    .skills-section-header .btn:hover {
+      background: transparent;
+      color: var(--primary);
+    }
+
+    .skills-intro-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #27272a 100%);
+      color: white;
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      margin-bottom: 32px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .skills-intro-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .skills-intro-text {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .skill-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .skill-card:hover {
+      border-color: var(--text-muted);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .skill-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .skill-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .skill-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .skill-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .skill-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .skill-status-badge {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 100px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .skill-status-badge.installed {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .skill-status-badge.not-installed {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    /* 优化后的表格样式 */
+    .stats-table th {
+      background: transparent;
+      border-bottom: 1px solid var(--border);
+      padding: 16px;
+    }
+
+    .stats-table td {
+      padding: 16px;
+    }
+
+    .stats-table-wrapper {
+      box-shadow: none;
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* 优化后的当前状态样式 */
+    .status-card {
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-info {
+      flex: 1;
+    }
+
+    .status-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 4px var(--success-bg);
+    }
+
+    .status-dot.inactive {
+      background: var(--text-muted);
+      box-shadow: none;
+    }
+
+    /* 优化后的卡片样式 */
+    .profile-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .profile-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .profile-card:hover {
+      border-color: var(--text-muted);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .profile-card.active {
+      border-color: var(--primary);
+      background: var(--bg-secondary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .profile-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .profile-model {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
+      padding: 2px 8px;
+      border-radius: 100px;
+    }
+
+    .profile-actions {
+      display: flex;
+      gap: 8px;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .profile-card:hover .profile-actions {
+      opacity: 1;
+    }
+
+    /* 按钮样式微调 */
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    /* 统一操作按钮宽度 */
+    .btn-secondary,
+    .btn-primary,
+    .btn-danger-ghost {
+      min-width: 80px;
+    }
+
+    /* 但不需要固定宽度的特定按钮除外 */
+    #btn-install-all,
+    #btn-uninstall-all,
+    .modal-actions .btn,
+    .skills-section-header .btn {
+      min-width: auto;
+    }
+
+    .btn-icon-only {
+        width: 32px;
+        padding: 0;
+    }
+
+    .btn-edit {
+        color: var(--text-secondary);
+        background: transparent;
+        border: 1px solid transparent;
+    }
+
+    .btn-edit:hover {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+    }
+
+    .btn-danger-ghost {
+        color: var(--danger);
+        background: transparent;
+        border: 1px solid transparent;
+    }
+
+    .btn-danger-ghost:hover {
+        background: var(--danger-bg);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-lg);
+      font-size: 13px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+    }
+
+    .modal h2 {
+      margin-bottom: 24px;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .form-group { margin-bottom: 20px; }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.15s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-bg);
+    }
+
+    .form-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .notification {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: var(--text-primary);
+      color: white;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 2000;
+      transform: translateX(120%);
+      transition: transform 0.3s;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .notification.show { transform: translateX(0); }
+    .notification.success { background: var(--success); }
+    .notification.error { background: var(--danger); }
+    .notification.info { background: #3b82f6; }
+
+    .reload-tip {
+      background: var(--success-bg);
+      border-left: 3px solid var(--success);
+      padding: 14px 16px;
+      margin-top: 16px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      color: #166534;
+    }
+
+    .setup-tip {
+      background: #fef3c7;
+      border-left: 3px solid var(--warning);
+      padding: 16px;
+      margin-top: 16px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      color: #78350f;
+    }
+
+    .setup-tip strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .setup-tip code {
+      background: rgba(255,255,255,0.7);
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .setup-tip p {
+      margin: 6px 0;
+      line-height: 1.6;
+    }
+
+    /* Token统计面板样式 */
+    .stats-section {
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .stat-card .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 6px;
+    }
+
+    .stat-card .stat-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .stats-table-wrapper {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .stats-table th,
+    .stats-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-table th {
+      background: var(--bg-tertiary);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .stats-table td {
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .stats-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .stats-table tr:hover {
+      background: var(--bg-primary);
+    }
+
+    .token-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+
+    .token-input { color: var(--primary); }
+    .token-output { color: var(--secondary); }
+    .token-total { color: var(--text-primary); font-weight: 600; }
+
+    .stats-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .empty-stats {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .model-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      background: var(--bg-tertiary);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* 配置状态检测面板样式 */
+    .config-status-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .config-status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .config-status-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .config-status-content {
+      min-height: 40px;
+    }
+
+    .status-loading {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .conflict-error {
+      background: var(--danger-bg);
+      border-left: 4px solid var(--danger);
+      padding: 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 12px;
+    }
+
+    .conflict-warning {
+      background: var(--warning-bg);
+      border-left: 4px solid var(--warning);
+      padding: 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 12px;
+    }
+
+    .conflict-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .conflict-icon {
+      font-size: 20px;
+    }
+
+    .conflict-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .conflict-message {
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .conflict-code {
+      background: rgba(0,0,0,0.08);
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+    }
+
+    .status-ok {
+      background: var(--success-bg);
+      border-left: 4px solid var(--success);
+      padding: 16px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-icon {
+      font-size: 20px;
+    }
+
+    .status-message {
+      color: #166534;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        display: block;
+        padding: 0;
+      }
+
+      .app-layout {
+        flex-direction: column;
+        display: block;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        flex-direction: row;
+        align-items: center;
+        padding: 0 16px;
+        top: 0;
+        z-index: 100;
+        background: var(--sidebar-bg);
+      }
+
+      .sidebar-header {
+        padding: 16px 0;
+        width: auto;
+        margin-right: 24px;
+      }
+
+      .nav-menu {
+        flex-direction: row;
+        flex: 1;
+        overflow-x: auto;
+        padding: 0;
+        gap: 8px;
+        align-items: center;
+        height: 100%;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .nav-item {
+        white-space: nowrap;
+        padding: 8px 12px;
+        font-size: 13px;
+        flex-shrink: 0;
+      }
+
+      .sidebar-footer {
+        display: none;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 24px 16px;
+        max-width: 100%;
+      }
+
+      .page-title {
+        font-size: 20px;
+      }
+
+      /* Profile卡片响应式 */
+      .profile-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .profile-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .profile-actions .btn {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .section-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .section-title .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      /* 统计摘要响应式 */
+      .stats-summary {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .stat-card {
+        padding: 12px;
+      }
+
+      .stat-card .stat-value {
+        font-size: 18px;
+      }
+
+      .stats-table-wrapper {
+        overflow-x: auto;
+        border-radius: var(--radius-md);
+      }
+
+      .stats-table {
+        min-width: 600px;
+      }
+
+      .modal {
+        padding: 24px;
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>Claude API</h1>
+      </div>
+
+      <nav class="nav-menu">
+        <a class="nav-item active" onclick="switchTab('profiles')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <rect x="7" y="7" width="3" height="9"></rect>
+            <rect x="14" y="7" width="3" height="5"></rect>
+          </svg>
+          API配置
+        </a>
+        <a class="nav-item" onclick="switchTab('skills')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          Skills 管理
+        </a>
+        <a class="nav-item" onclick="switchTab('mcp')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          MCP Servers
+        </a>
+        <a class="nav-item" onclick="switchTab('stats')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          Token 统计
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        版本 1.0.0
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 配置方案标签页 -->
+      <div class="tab-content active" id="tab-profiles">
+        <div class="page-header">
+          <h2 class="page-title">API配置</h2>
+          <p class="page-desc">管理和切换不同的 API 配置组合</p>
+        </div>
+
+        <div class="status-card">
+          <div class="status-info">
+            <div class="status-label">当前状态</div>
+            <div class="status-value">
+              <span id="currentStatus">加载中...</span>
+              <div id="statusDot" class="status-dot"></div>
+            </div>
+          </div>
+
+          <div class="status-actions">
+            <!-- 这里可以放一些全局操作按钮，如果需要的话 -->
+          </div>
+        </div>
+
+        <!-- 配置状态检测面板 -->
+        <div class="config-status-card">
+          <div class="config-status-header">
+            <div class="config-status-title">配置状态检测</div>
+            <button class="btn btn-secondary" onclick="checkConfigStatus()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              刷新检测
+            </button>
+          </div>
+          <div id="configStatusContent" class="config-status-content">
+            <div class="status-loading">检测中...</div>
+          </div>
+        </div>
+
+        <!-- 重启提示 -->
+        <div class="reload-tip" id="restartTip" style="display: none; margin-bottom: 32px;">
+          配置已修复，请在终端执行 <code>source ~/.zshrc</code> 重新加载配置
+        </div>
+
+        <div class="reload-tip" id="reloadTip" style="display: none; margin-bottom: 32px;">
+          配置已激活，现在可以直接使用 claude 命令
+        </div>
+
+        <div class="setup-tip" id="setupTip" style="display: none; margin-bottom: 32px;">
+            <strong>首次使用需要一键安装</strong>
+            <p>在终端运行以下命令：</p>
+            <code>cd /Users/shawn/Documents/ClaudeCode/claude-api-config && bash setup.sh && source ~/.zshrc</code>
+            <p>安装后，每次在网页点击激活，直接使用 claude 命令即可，无需其他操作</p>
+        </div>
+
+        <div class="skills-section-header">
+          <div class="section-title" style="margin: 0;">所有方案</div>
+          <button class="btn btn-primary" onclick="showAddModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            新增方案
+          </button>
+        </div>
+
+        <div id="profileList" class="profile-list">
+          <div class="empty-state">加载中...</div>
+        </div>
+      </div>
+
+      <!-- Skills管理标签页 -->
+      <div class="tab-content" id="tab-skills">
+        <div class="page-header">
+          <h2 class="page-title">Skills</h2>
+          <p class="page-desc">扩展 Claude 的能力，支持文档处理等高级功能</p>
+        </div>
+
+        <div class="skills-intro-card">
+          <div class="skills-intro-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            什么是 Skills？
+          </div>
+          <div class="skills-intro-text">
+            Skills 是 Claude 的官方功能扩展。安装后可以让 Claude 帮你处理 PDF、Word、PPT 等文件，或使用各种示例技能提升效率。
+          </div>
+        </div>
+
+        <div class="skills-section-header">
+          <div class="section-title" style="margin: 0;">Skills Marketplace</div>
+          <button class="btn btn-primary" onclick="loadSkillsStatus()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 6px;">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            刷新状态
+          </button>
+        </div>
+
+        <div class="profile-list">
+          <!-- Marketplace -->
+          <div class="skill-card">
+            <div class="skill-header">
+              <div class="skill-info">
+                 <div class="skill-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                 </div>
+                 <div>
+                    <div class="skill-name">Marketplace</div>
+                    <div class="skill-desc">添加 anthropics/skills 插件市场（必须先安装才能使用下方的 skills）</div>
+                 </div>
+              </div>
+              <div class="profile-actions">
+                <span id="status-marketplace" class="skill-status-badge not-installed">未安装</span>
+                <button class="btn btn-secondary" onclick="installSkills('marketplace')" id="btn-install-marketplace">添加</button>
+                <button class="btn btn-danger-ghost" onclick="uninstallSkills('marketplace')" id="btn-uninstall-marketplace" style="display: none;">卸载</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="skills-section-header" style="margin-top: 32px;">
+          <div class="section-title" style="margin: 0;">
+            可用的 Plugins
+            <span id="plugins-count-badge" style="font-size: 12px; color: var(--text-secondary); font-weight: 400; margin-left: 8px;"></span>
+          </div>
+        </div>
+
+        <div id="plugins-list" class="profile-list">
+          <div class="empty-state">请先安装 Marketplace</div>
+        </div>
+      </div>
+
+      <!-- MCP Servers 标签页 -->
+      <div class="tab-content" id="tab-mcp">
+        <div class="page-header">
+          <h2 class="page-title">MCP</h2>
+          <p class="page-desc">管理 Claude Desktop 的 MCP 服务器配置</p>
+        </div>
+
+        <div class="skills-section-header">
+          <div class="section-title" style="margin: 0;">已配置 Servers</div>
+          <button class="btn btn-primary" onclick="showAddMcpModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            添加 Server
+          </button>
+        </div>
+
+        <div id="mcpList" class="profile-list">
+          <div class="empty-state">加载中...</div>
+        </div>
+      </div>
+
+      <!-- Token统计标签页 -->
+      <div class="tab-content" id="tab-stats">
+        <div class="page-header">
+          <h2 class="page-title">Token 统计</h2>
+          <p class="page-desc">监控各模型和方案的 Token 使用量</p>
+        </div>
+
+        <div class="stats-summary">
+          <div class="stat-card">
+            <div class="stat-label">总请求次数</div>
+            <div class="stat-value" id="totalRequests">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">输入Token</div>
+            <div class="stat-value" id="totalInputTokens">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">输出Token</div>
+            <div class="stat-value" id="totalOutputTokens">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">总Token</div>
+            <div class="stat-value" id="totalTokens">-</div>
+          </div>
+        </div>
+
+        <div class="section-title">
+          详细记录
+          <button class="btn btn-danger-ghost" onclick="clearAllStats()" style="font-size: 13px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            清空统计
+          </button>
+        </div>
+
+        <div class="stats-table-wrapper">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>API方案</th>
+                <th>模型</th>
+                <th>请求次数</th>
+                <th>输入Token</th>
+                <th>输出Token</th>
+                <th>总Token</th>
+                <th>最后使用</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="statsTableBody">
+              <tr>
+                <td colspan="8" class="empty-stats">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增/编辑弹窗 -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2 id="modalTitle">新增配置方案</h2>
+      <form id="profileForm">
+        <input type="hidden" id="editId" value="">
+
+        <div class="form-group">
+          <label for="name">方案名称 *</label>
+          <input type="text" id="name" placeholder="例如：智谱 GLM-4.7" required>
+        </div>
+
+        <div class="form-group">
+          <label for="apiUrl">API URL *</label>
+          <input type="url" id="apiUrl" placeholder="https://api.qnaigc.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="apiKey">API Key *</label>
+          <input type="password" id="apiKey" placeholder="sk-..." required>
+          <div class="form-hint">支持 OpenAI 格式和 Anthropic 格式</div>
+        </div>
+
+        <div class="form-group">
+          <label for="modelName">模型名称 *</label>
+          <input type="text" id="modelName" placeholder="z-ai/glm-4.7" required>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="hideModal()">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MCP Server 新增弹窗 -->
+  <div class="modal-overlay" id="mcpModal">
+    <div class="modal">
+      <h2>添加 MCP Server</h2>
+      <form id="mcpForm">
+        <input type="hidden" id="editMcpName" value="">
+        <div class="form-group">
+          <label for="mcpName">Server 名称 *</label>
+          <input type="text" id="mcpName" placeholder="例如：filesystem" required>
+        </div>
+
+        <!-- 传输类型选择 -->
+        <div class="form-group">
+          <label style="margin-bottom: 12px;">传输类型</label>
+          <div style="display: flex; gap: 20px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: normal;">
+              <input type="radio" name="mcpType" value="stdio" checked onchange="toggleMcpType()">
+              Local (stdio)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: normal;">
+              <input type="radio" name="mcpType" value="sse" onchange="toggleMcpType()">
+              Remote (SSE)
+            </label>
+          </div>
+        </div>
+
+        <!-- Stdio Fields -->
+        <div id="stdioFields">
+          <div class="form-group">
+            <label for="mcpCommand">启动命令 *</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="mcpCommand" placeholder="例如：npx">
+              <button type="button" class="btn btn-secondary" onclick="testCommand()" title="测试命令能否启动">
+                测试
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="mcpArgs">参数 (每行一个)</label>
+            <textarea id="mcpArgs" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--text-primary); min-height: 80px;" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/Users/username/Desktop"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>环境变量</label>
+            <div id="envVarsContainer" style="margin-bottom: 10px;">
+              <!-- 动态插入 -->
+            </div>
+            <button type="button" class="btn btn-secondary" style="width: 100%; font-size: 13px;" onclick="addEnvVarRow()">
+              + 添加变量
+            </button>
+          </div>
+        </div>
+
+        <!-- SSE Fields -->
+        <div id="sseFields" style="display: none;">
+          <div class="form-group">
+            <label for="mcpUrl">Server URL *</label>
+            <input type="url" id="mcpUrl" placeholder="http://localhost:8000/sse">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="hideMcpModal()">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 通知 -->
+  <div class="notification" id="notification"></div>
+
+  <script>
+    // 状态管理
+    let config = { profiles: [], activeProfile: null };
+    let isInstalled = false;
+    let tokenStats = { records: [] };
+    let currentTab = 'profiles';
+    let skillsStatus = { marketplaceAdded: false, plugins: [] };
+    let availableSkills = [];
+    let enabledSkills = [];
+    let mcpServersList = [];
+
+    // 切换标签页
+    function switchTab(tabName) {
+      currentTab = tabName;
+
+      // 更新标签按钮状态
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.currentTarget.classList.add('active');
+
+      // 更新内容区域显示
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      // 切换到统计标签时重新加载数据
+      if (tabName === 'stats') {
+        loadTokenStats();
+      }
+      // 切换到Skills标签时加载状态
+      if (tabName === 'skills') {
+        loadSkillsStatus();
+      }
+      // 切换到MCP标签时加载数据
+      if (tabName === 'mcp') {
+        loadMcpServers();
+      }
+    }
+
+    // 加载 MCP Servers
+    async function loadMcpServers() {
+      try {
+        const res = await fetch('/api/mcp/servers');
+        const data = await res.json();
+        mcpServersList = data.servers || [];
+        renderMcpList(mcpServersList);
+      } catch (error) {
+        console.error('加载 MCP Servers 失败', error);
+        showNotification('加载 MCP Servers 失败', 'error');
+      }
+    }
+
+    // 渲染 MCP 列表
+    function renderMcpList(servers) {
+      const listEl = document.getElementById('mcpList');
+      if (!listEl) return;
+
+      if (servers.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">暂无 MCP Server 配置</div>';
+        return;
+      }
+
+      listEl.innerHTML = servers.map(server => {
+        let details = '';
+        let badge = '';
+
+        if (server.url) {
+            // SSE Type
+            badge = '<span class="skill-status-badge installed" style="background: var(--bg-tertiary); color: var(--text-primary);">Remote (SSE)</span>';
+            details = `<div class="skill-desc" style="font-family: monospace; font-size: 12px; margin-top: 4px;">${escapeHtml(server.url)}</div>`;
+        } else {
+            // Stdio Type
+            badge = '<span class="skill-status-badge installed" style="background: var(--bg-tertiary); color: var(--text-primary);">Local (stdio)</span>';
+            details = `<div class="skill-desc" style="font-family: monospace; font-size: 12px; margin-top: 4px;">
+                  ${escapeHtml(server.command || '')} ${(server.args || []).join(' ')}
+                </div>`;
+        }
+
+        return `
+        <div class="skill-card">
+          <div class="skill-header">
+            <div class="skill-info">
+              <div class="skill-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="skill-name" style="display: flex; align-items: center; gap: 8px;">
+                    ${escapeHtml(server.name)}
+                    ${badge}
+                </div>
+                ${details}
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button class="btn btn-edit btn-icon-only" onclick="showEditMcpModal('${escapeHtml(server.name)}')" title="Edit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="btn btn-danger-ghost" onclick="deleteMcpServer('${server.name}')">删除</button>
+            </div>
+          </div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    // 弹窗控制 - MCP
+    function showAddMcpModal() {
+      document.getElementById('editMcpName').value = '';
+      document.querySelector('#mcpModal h2').textContent = 'Add MCP Server';
+      document.getElementById('mcpName').value = '';
+      document.getElementById('mcpCommand').value = '';
+      document.getElementById('mcpArgs').value = '';
+      document.getElementById('mcpUrl').value = '';
+      document.getElementById('envVarsContainer').innerHTML = ''; // Clear env vars
+
+      // Reset to default Stdio
+      document.querySelector('input[name="mcpType"][value="stdio"]').checked = true;
+      toggleMcpType();
+
+      document.getElementById('mcpModal').classList.add('show');
+    }
+
+    function showEditMcpModal(name) {
+      const server = mcpServersList.find(s => s.name === name);
+      if (!server) return;
+
+      // Set hidden field
+      document.getElementById('editMcpName').value = name;
+      document.getElementById('mcpName').value = server.name;
+
+      // Handle Type
+      const type = server.url ? 'sse' : 'stdio';
+      document.querySelector(`input[name="mcpType"][value="${type}"]`).checked = true;
+      toggleMcpType(); // Refresh UI visibility
+
+      // Populate fields based on type
+      if (type === 'sse') {
+        document.getElementById('mcpUrl').value = server.url;
+      } else {
+        document.getElementById('mcpCommand').value = server.command;
+        document.getElementById('mcpArgs').value = (server.args || []).join('\n');
+
+        // Populate Env Vars
+        const container = document.getElementById('envVarsContainer');
+        container.innerHTML = ''; // Clear existing
+        if (server.env) {
+          Object.entries(server.env).forEach(([key, value]) => {
+            addEnvVarRow(key, value);
+          });
+        }
+      }
+
+      // Update Modal Title
+      document.querySelector('#mcpModal h2').textContent = 'Edit MCP Server';
+
+      document.getElementById('mcpModal').classList.add('show');
+    }
+
+    function hideMcpModal() {
+      document.getElementById('mcpModal').classList.remove('show');
+    }
+
+    // Toggle MCP Type
+    function toggleMcpType() {
+      const type = document.querySelector('input[name="mcpType"]:checked').value;
+      const stdioFields = document.getElementById('stdioFields');
+      const sseFields = document.getElementById('sseFields');
+
+      if (type === 'stdio') {
+        stdioFields.style.display = 'block';
+        sseFields.style.display = 'none';
+        document.getElementById('mcpCommand').required = true;
+        document.getElementById('mcpUrl').required = false;
+      } else {
+        stdioFields.style.display = 'none';
+        sseFields.style.display = 'block';
+        document.getElementById('mcpCommand').required = false;
+        document.getElementById('mcpUrl').required = true;
+      }
+    }
+
+    // Dynamic Env Vars Logic
+    function addEnvVarRow(key = '', value = '') {
+        const container = document.getElementById('envVarsContainer');
+        const id = Date.now();
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '8px';
+        row.style.marginBottom = '8px';
+        row.innerHTML = `
+            <input type="text" placeholder="KEY" class="env-key" value="${escapeHtml(key)}" style="flex: 1; min-width: 0;">
+            <input type="text" placeholder="VALUE" class="env-value" value="${escapeHtml(value)}" style="flex: 2; min-width: 0;">
+            <button type="button" class="btn btn-danger-ghost btn-icon-only" onclick="this.parentElement.remove()" tabindex="-1">✕</button>
+        `;
+        container.appendChild(row);
+    }
+
+    // Test Command Logic
+    async function testCommand() {
+        const command = document.getElementById('mcpCommand').value.trim();
+        const argsText = document.getElementById('mcpArgs').value.trim();
+        const args = argsText ? argsText.split('\n').filter(line => line.trim()) : [];
+
+        if (!command) {
+            showNotification('请输入启动命令', 'error');
+            return;
+        }
+
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/mcp/test-command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command, args })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showNotification('测试通过：命令可执行', 'success');
+            } else {
+                showNotification('测试失败：' + (data.error || '无法执行命令'), 'error');
+            }
+        } catch (error) {
+             showNotification('请求失败', 'error');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+
+    // MCP 表单提交
+    document.getElementById('mcpForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const type = document.querySelector('input[name="mcpType"]:checked').value;
+      const name = document.getElementById('mcpName').value.trim();
+      let serverData = { name, type };
+
+      if (type === 'stdio') {
+          const command = document.getElementById('mcpCommand').value.trim();
+          const argsText = document.getElementById('mcpArgs').value.trim();
+          const args = argsText ? argsText.split('\n').filter(line => line.trim()) : [];
+
+          // Collect Env Vars
+          const env = {};
+          document.querySelectorAll('#envVarsContainer > div').forEach(row => {
+              const key = row.querySelector('.env-key').value.trim();
+              const value = row.querySelector('.env-value').value.trim();
+              if (key) env[key] = value;
+          });
+
+          serverData = { ...serverData, command, args, env };
+      } else {
+          const url = document.getElementById('mcpUrl').value.trim();
+          serverData = { ...serverData, url };
+      }
+
+      const editMcpName = document.getElementById('editMcpName').value;
+      const method = editMcpName ? 'PUT' : 'POST';
+      const url = editMcpName
+        ? `/api/mcp/servers/${encodeURIComponent(editMcpName)}`
+        : '/api/mcp/servers';
+
+      try {
+        const res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(serverData)
+        });
+
+        if (res.ok) {
+          showNotification('MCP Server 保存成功！请重启 Claude Desktop 生效', 'success');
+          // Add a longer persistent alert or confirm dialog
+          alert("配置已保存。\n\n注意：您必须完全退出并重启 Claude Desktop 应用，新配置才会生效。");
+
+          hideMcpModal();
+          loadMcpServers();
+        } else {
+          const data = await res.json();
+          showNotification(data.error || '保存失败', 'error');
+        }
+      } catch (error) {
+        showNotification('保存失败', 'error');
+      }
+    });
+
+    // 删除 MCP Server
+    async function deleteMcpServer(name) {
+      if (!confirm(`确定要删除 MCP Server "${name}" 吗？`)) return;
+
+      try {
+        const res = await fetch(`/api/mcp/servers/${name}`, { method: 'DELETE' });
+        if (res.ok) {
+          showNotification('删除成功', 'success');
+          loadMcpServers();
+        } else {
+          showNotification('删除失败', 'error');
+        }
+      } catch (error) {
+        showNotification('删除失败', 'error');
+      }
+    }
+
+    // ========== 配置状态检测相关函数 ==========
+
+    // 检测配置状态
+    async function checkConfigStatus() {
+      const contentEl = document.getElementById('configStatusContent');
+      contentEl.innerHTML = '<div class="status-loading">检测中...</div>';
+
+      try {
+        const res = await fetch('/api/config/conflicts');
+        const data = await res.json();
+
+        if (data.hasConflicts) {
+          const errors = data.conflicts.filter(c => c.severity === 'error');
+          const warnings = data.conflicts.filter(c => c.severity === 'warning');
+
+          let html = '';
+
+          if (errors.length > 0) {
+            html += `
+              <div class="conflict-error">
+                <div class="conflict-header">
+                  <div class="conflict-icon">⚠️</div>
+                  <div class="conflict-title">发现配置冲突</div>
+                </div>
+                <div class="conflict-message">${escapeHtml(errors[0].message)}</div>
+                ${errors[0].lines ? `<pre class="conflict-code">${escapeHtml(errors[0].lines.join('\n'))}</pre>` : ''}
+                ${errors[0].recommendation ? `<div class="conflict-message" style="margin-top: 8px;">💡 ${escapeHtml(errors[0].recommendation)}</div>` : ''}
+                <button class="btn btn-primary" onclick="fixConflicts()" style="margin-top: 8px;">
+                  一键修复
+                </button>
+              </div>
+            `;
+          }
+
+          if (warnings.length > 0) {
+            html += `
+              <div class="conflict-warning">
+                <div class="conflict-header">
+                  <div class="conflict-icon">ℹ️</div>
+                  <div class="conflict-title">注意事项</div>
+                </div>
+                <div class="conflict-message">${escapeHtml(warnings[0].message)}</div>
+              </div>
+            `;
+          }
+
+          contentEl.innerHTML = html;
+        } else {
+          contentEl.innerHTML = `
+            <div class="status-ok">
+              <div class="status-icon">✓</div>
+              <div class="status-message">配置状态正常，未发现冲突</div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        contentEl.innerHTML = `
+          <div class="conflict-warning">
+            <div class="conflict-message">检测失败: ${escapeHtml(error.message)}</div>
+          </div>
+        `;
+      }
+    }
+
+    // 一键修复配置冲突
+    async function fixConflicts() {
+      if (!confirm('确定要自动修复配置冲突吗？\n\n这将修改 .zshrc 文件，移除硬编码的 ANTHROPIC_* 配置。')) return;
+
+      try {
+        const res = await fetch('/api/config/fix-conflicts', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.success) {
+          showNotification(data.message, 'success');
+
+          if (data.requiresRestart) {
+            document.getElementById('restartTip').style.display = 'block';
+          }
+
+          // 重新检测状态
+          await checkConfigStatus();
+        } else {
+          showNotification(data.error || '修复失败', 'error');
+        }
+      } catch (error) {
+        showNotification('修复失败: ' + error.message, 'error');
+      }
+    }
+
+    // 测试 API 连接
+    async function testProfile(id) {
+      const btn = event.target;
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<span style="animation: spin 1s linear inline-block">⟳</span> 测试中...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/profiles/${id}/test`, { method: 'POST' });
+        const data = await res.json();
+
+        if (data.success) {
+          showNotification(`连接成功！模型: ${data.model}，延迟: ${data.latency}ms`, 'success');
+        } else {
+          showNotification(`连接失败: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showNotification('测试失败: ' + error.message, 'error');
+      } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+      }
+    }
+
+    // ========== 原有功能 ==========
+
+    // 加载配置
+    async function loadConfig() {
+      try {
+        const [configRes, setupRes] = await Promise.all([
+          fetch('/api/config'),
+          fetch('/api/check-setup')
+        ]);
+        config = await configRes.json();
+        const setupData = await setupRes.json();
+        isInstalled = setupData.isInstalled;
+        render();
+      } catch (error) {
+        showNotification('加载配置失败', 'error');
+      }
+    }
+
+    // 加载token统计
+    async function loadTokenStats() {
+      try {
+        const res = await fetch('/api/token-stats');
+        const data = await res.json();
+        tokenStats = data;
+        renderStats();
+      } catch (error) {
+        console.error('加载统计失败', error);
+      }
+    }
+
+    // 加载Skills状态
+    async function loadSkillsStatus() {
+      // 查找刷新按钮（如果是从按钮点击触发）
+      const refreshBtn = event?.target?.closest('button');
+      const originalHTML = refreshBtn?.innerHTML;
+
+      try {
+        if (refreshBtn) {
+          refreshBtn.disabled = true;
+          refreshBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 6px; animation: spin 1s linear infinite;"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>刷新中...';
+        }
+
+        const res = await fetch('/api/skills/status');
+        const data = await res.json();
+        skillsStatus = data;
+
+        // 加载可用的 skills 列表
+        await loadAvailableSkills();
+
+        renderSkillsStatus();
+
+        if (refreshBtn) {
+          showNotification('状态已刷新', 'success');
+        }
+      } catch (error) {
+        console.error('加载Skills状态失败', error);
+        showNotification('刷新失败', 'error');
+      } finally {
+        if (refreshBtn && originalHTML) {
+          refreshBtn.disabled = false;
+          refreshBtn.innerHTML = originalHTML;
+        }
+      }
+    }
+
+    // 加载可用的 skills 列表
+    async function loadAvailableSkills() {
+      try {
+        const res = await fetch('/api/skills/available');
+        const data = await res.json();
+        availableSkills = data.available || [];
+        enabledSkills = data.enabled || [];
+        renderSkillsList();
+      } catch (error) {
+        console.error('加载可用Skills失败', error);
+        availableSkills = [];
+        enabledSkills = [];
+      }
+    }
+
+    // 渲染Skills状态
+    function renderSkillsStatus() {
+      const { marketplaceAdded } = skillsStatus;
+
+      // 更新marketplace状态
+      const marketStatus = document.getElementById('status-marketplace');
+      const installMarketBtn = document.getElementById('btn-install-marketplace');
+      const uninstallMarketBtn = document.getElementById('btn-uninstall-marketplace');
+
+      if (marketStatus) {
+        if (marketplaceAdded) {
+          marketStatus.textContent = '已添加';
+          marketStatus.classList.remove('not-installed');
+          marketStatus.classList.add('installed');
+          marketStatus.style.background = 'var(--success-bg)';
+          marketStatus.style.color = 'var(--success)';
+          if (installMarketBtn) installMarketBtn.style.display = 'none';
+          if (uninstallMarketBtn) uninstallMarketBtn.style.display = 'inline-flex';
+        } else {
+          marketStatus.textContent = '未安装';
+          marketStatus.classList.remove('installed');
+          marketStatus.classList.add('not-installed');
+          marketStatus.style.background = 'var(--warning-bg)';
+          marketStatus.style.color = 'var(--warning)';
+          if (installMarketBtn) installMarketBtn.style.display = 'inline-flex';
+          if (uninstallMarketBtn) uninstallMarketBtn.style.display = 'none';
+        }
+      }
+    }
+
+    // 渲染 Skills 列表
+    function renderSkillsList() {
+      const skillsList = document.getElementById('plugins-list'); // Changed from skills-list
+      const countBadge = document.getElementById('plugins-count-badge'); // Changed from skills-count-badge
+      const enableAllBtn = document.getElementById('btn-enable-all');
+
+      if (!skillsStatus.marketplaceAdded || availableSkills.length === 0) {
+        if (skillsList) skillsList.innerHTML = '<div class="empty-state">请先安装 Marketplace</div>';
+        if (countBadge) countBadge.textContent = '';
+        if (enableAllBtn) enableAllBtn.style.display = 'none';
+        return;
+      }
+
+      // 更新计数
+      const enabledCount = enabledSkills.length;
+      const totalCount = availableSkills.length;
+      if (countBadge) countBadge.textContent = `已启用 ${enabledCount}/${totalCount}`;
+
+      // 显示/隐藏全部启用按钮
+      if (enableAllBtn) {
+        enableAllBtn.style.display = enabledCount < totalCount ? 'inline-flex' : 'none';
+      }
+
+      if (!skillsList) return;
+
+      // 渲染 skills 卡片
+      skillsList.innerHTML = availableSkills.map(skill => {
+        const isEnabled = enabledSkills.includes(skill.id);
+        return `
+          <div class="skill-card">
+            <div class="skill-header">
+              <div class="skill-info">
+                <div class="skill-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="skill-name">${escapeHtml(skill.name)}</div>
+                  <div class="skill-desc">${escapeHtml(skill.description || skill.id)}</div>
+                </div>
+              </div>
+              <div class="profile-actions">
+                <span class="skill-status-badge ${isEnabled ? 'installed' : 'not-installed'}" style="background: ${isEnabled ? 'var(--success-bg)' : 'var(--warning-bg)'}; color: ${isEnabled ? 'var(--success)' : 'var(--warning)'};">
+                  ${isEnabled ? '已启用' : '未启用'}
+                </span>
+                <button class="btn ${isEnabled ? 'btn-danger-ghost' : 'btn-primary'}" onclick="toggleSkill('${skill.id}')">
+                  ${isEnabled ? '禁用' : '启用'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 安装Skills
+    async function installSkills(type) {
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = type === 'marketplace' || type === 'all' ? '正在下载...' : '验证中...';
+      btn.disabled = true;
+
+      try {
+        // 对于 marketplace 安装，设置较长的超时时间（3分钟）
+        const timeout = (type === 'marketplace' || type === 'all') ? 180000 : 30000;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+        const res = await fetch('/api/skills/install', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        const data = await res.json();
+        if (data.success) {
+          // 检查是否有 marketplace 安装
+          const hasMarketplaceInstall = data.results?.some(r =>
+            r.type === 'marketplace' && r.message.includes('安装成功')
+          );
+
+          if (hasMarketplaceInstall) {
+            showNotification('Marketplace 安装成功！正在刷新状态...', 'success');
+          } else {
+            showNotification('操作完成', 'success');
+          }
+
+          await loadSkillsStatus();
+        } else {
+          showNotification(data.error || '操作失败', 'error');
+          await loadSkillsStatus();
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          // 超时情况
+          if (type === 'marketplace' || type === 'all') {
+            showNotification('安装正在后台进行，请稍后点击"刷新状态"查看', 'info');
+            // 启动轮询检查（每5秒检查一次，最多12次=1分钟）
+            startPollingStatus(12, 5000);
+          } else {
+            showNotification('操作超时', 'error');
+          }
+        } else {
+          showNotification('操作失败: ' + error.message, 'error');
+        }
+        await loadSkillsStatus();
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // 轮询检查安装状态
+    let pollingTimer = null;
+    function startPollingStatus(maxAttempts, interval) {
+      let attempts = 0;
+
+      // 清除之前的轮询
+      if (pollingTimer) {
+        clearInterval(pollingTimer);
+      }
+
+      pollingTimer = setInterval(async () => {
+        attempts++;
+
+        // 静默刷新状态（不显示通知）
+        try {
+          const res = await fetch('/api/skills/status');
+          const data = await res.json();
+          const oldStatus = skillsStatus.marketplaceAdded;
+          skillsStatus = data;
+          renderSkillsStatus();
+
+          // 如果状态变化了，说明安装完成
+          if (!oldStatus && data.marketplaceAdded) {
+            showNotification('Marketplace 安装完成！', 'success');
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+          }
+        } catch (error) {
+          console.error('轮询状态失败', error);
+        }
+
+        // 达到最大尝试次数后停止
+        if (attempts >= maxAttempts) {
+          clearInterval(pollingTimer);
+          pollingTimer = null;
+        }
+      }, interval);
+    }
+
+    // 卸载Skills
+    async function uninstallSkills(type) {
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '卸载中...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/skills/uninstall', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showNotification('卸载完成', 'success');
+          await loadSkillsStatus();
+        } else {
+          showNotification(data.error || '卸载失败', 'error');
+        }
+      } catch (error) {
+        showNotification('卸载失败', 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // 切换 skill 的启用/禁用状态
+    async function toggleSkill(skillId) {
+      const isEnabled = enabledSkills.includes(skillId);
+      const endpoint = isEnabled ? '/api/skills/disable' : '/api/skills/enable';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skillId })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          enabledSkills = data.enabled;
+          renderSkillsList();
+          showNotification(isEnabled ? 'Skill 已禁用' : 'Skill 已启用', 'success');
+        } else {
+          showNotification('操作失败', 'error');
+        }
+      } catch (error) {
+        showNotification('操作失败: ' + error.message, 'error');
+      }
+    }
+
+    // 全部启用
+    async function enableAllSkills() {
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '启用中...';
+      btn.disabled = true;
+
+      try {
+        let successCount = 0;
+        for (const skill of availableSkills) {
+          if (!enabledSkills.includes(skill.id)) {
+            const res = await fetch('/api/skills/enable', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ skillId: skill.id })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+              enabledSkills = data.enabled;
+              successCount++;
+            }
+          }
+        }
+
+        renderSkillsList();
+        showNotification(`已启用 ${successCount} 个 Skills`, 'success');
+      } catch (error) {
+        showNotification('批量启用失败', 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // 渲染
+    function render() {
+      // 隐藏所有提示
+      document.getElementById('reloadTip').style.display = 'none';
+      document.getElementById('setupTip').style.display = 'none';
+
+      // 显示安装提示（如果未安装）
+      if (!isInstalled) {
+        document.getElementById('setupTip').style.display = 'block';
+      }
+      // 更新当前状态
+      const statusEl = document.getElementById('currentStatus');
+      const statusDot = document.getElementById('statusDot');
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfile);
+
+      if (activeProfile) {
+        statusEl.textContent = activeProfile.name;
+        statusDot.className = 'status-dot';
+      } else {
+        statusEl.textContent = '未激活任何方案';
+        statusDot.className = 'status-dot inactive';
+      }
+
+      // 渲染方案列表
+      const listEl = document.getElementById('profileList');
+      if (config.profiles.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">暂无配置方案，点击上方按钮添加</div>';
+        return;
+      }
+
+      listEl.innerHTML = config.profiles.map(p => `
+        <div class="profile-card ${p.id === config.activeProfile ? 'active' : ''}">
+          <div class="profile-header">
+            <div class="profile-name">
+              ${escapeHtml(p.name)}
+              <span class="profile-model">
+                ${escapeHtml(p.modelName || '未知模型')}
+              </span>
+            </div>
+            <div class="profile-actions">
+              ${p.id !== config.activeProfile ? `
+              <button class="btn btn-secondary" onclick="activateProfile('${p.id}')">
+                激活
+              </button>` : `
+              <button class="btn btn-primary" disabled style="opacity: 1; cursor: default;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 4px;">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                已激活
+              </button>`
+              }
+              <button class="btn btn-secondary" onclick="testProfile('${p.id}')" title="测试连接">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+              </button>
+              <button class="btn btn-edit btn-icon-only" onclick="showEditModal('${p.id}')" title="编辑">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="btn btn-danger-ghost btn-icon-only" onclick="deleteProfile('${p.id}')" title="删除">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 渲染token统计
+    function renderStats() {
+      const records = tokenStats.records || [];
+
+      // 计算总计
+      const totalRequests = records.reduce((sum, r) => sum + r.requestCount, 0);
+      const totalInputTokens = records.reduce((sum, r) => sum + r.inputTokens, 0);
+      const totalOutputTokens = records.reduce((sum, r) => sum + r.outputTokens, 0);
+      const totalTokens = totalInputTokens + totalOutputTokens;
+
+      // 更新统计卡片
+      document.getElementById('totalRequests').textContent = formatNumber(totalRequests);
+      document.getElementById('totalInputTokens').textContent = formatNumber(totalInputTokens);
+      document.getElementById('totalOutputTokens').textContent = formatNumber(totalOutputTokens);
+      document.getElementById('totalTokens').textContent = formatNumber(totalTokens);
+
+      // 渲染表格
+      const tbody = document.getElementById('statsTableBody');
+      if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-stats">暂无使用记录</td></tr>';
+        return;
+      }
+
+      // 按最后使用时间排序
+      const sortedRecords = [...records].sort((a, b) =>
+        new Date(b.lastUsedAt) - new Date(a.lastUsedAt)
+      );
+
+      tbody.innerHTML = sortedRecords.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.profileName)}</strong></td>
+          <td><span class="model-badge">${escapeHtml(r.modelName)}</span></td>
+          <td class="token-number">${r.requestCount}</td>
+          <td class="token-number token-input">${formatNumber(r.inputTokens)}</td>
+          <td class="token-number token-output">${formatNumber(r.outputTokens)}</td>
+          <td class="token-number token-total">${formatNumber(r.totalTokens)}</td>
+          <td style="font-size: 13px; color: var(--text-secondary);">${formatDate(r.lastUsedAt)}</td>
+          <td>
+            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteStatRecord('${r.id}')">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // 删除统计记录
+    async function deleteStatRecord(id) {
+      if (!confirm('确定要删除这条统计记录吗？')) return;
+
+      try {
+        const res = await fetch(`/api/token-stats/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showNotification('删除成功', 'success');
+          await loadTokenStats();
+        } else {
+          showNotification('删除失败', 'error');
+        }
+      } catch (error) {
+        showNotification('删除失败', 'error');
+      }
+    }
+
+    // 清空所有统计
+    async function clearAllStats() {
+      if (!confirm('确定要清空所有统计数据吗？此操作不可恢复！')) return;
+
+      try {
+        const res = await fetch('/api/token-stats', { method: 'DELETE' });
+        if (res.ok) {
+          showNotification('已清空所有统计', 'success');
+          await loadTokenStats();
+        } else {
+          showNotification('清空失败', 'error');
+        }
+      } catch (error) {
+        showNotification('清空失败', 'error');
+      }
+    }
+
+    // 格式化数字
+    function formatNumber(num) {
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      }
+      return num.toString();
+    }
+
+    // 格式化日期
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return '刚刚';
+      if (diffMins < 60) return `${diffMins}分钟前`;
+      if (diffHours < 24) return `${diffHours}小时前`;
+      if (diffDays < 7) return `${diffDays}天前`;
+
+      return date.toLocaleDateString('zh-CN', {
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    // 新增方案
+    async function addProfile(profile) {
+      try {
+        const res = await fetch('/api/profiles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile)
+        });
+
+        if (res.ok) {
+          showNotification('添加成功', 'success');
+          await loadConfig();
+          hideModal();
+        } else {
+          const data = await res.json();
+          showNotification(data.error || '添加失败', 'error');
+        }
+      } catch (error) {
+        showNotification('添加失败', 'error');
+      }
+    }
+
+    // 更新方案
+    async function updateProfile(id, profile) {
+      try {
+        const res = await fetch(`/api/profiles/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profile)
+        });
+
+        if (res.ok) {
+          showNotification('保存成功', 'success');
+          await loadConfig();
+          hideModal();
+        } else {
+          const data = await res.json();
+          showNotification(data.error || '保存失败', 'error');
+        }
+      } catch (error) {
+        showNotification('保存失败', 'error');
+      }
+    }
+
+    // 删除方案
+    async function deleteProfile(id) {
+      if (!confirm('确定要删除这个方案吗？')) return;
+
+      try {
+        const res = await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showNotification('删除成功', 'success');
+          await loadConfig();
+        } else {
+          showNotification('删除失败', 'error');
+        }
+      } catch (error) {
+        showNotification('删除失败', 'error');
+      }
+    }
+
+    // 激活方案
+    async function activateProfile(id) {
+      try {
+        const res = await fetch(`/api/profiles/${id}/activate`, {
+          method: 'POST'
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          config.activeProfile = id;
+          isInstalled = data.isInstalled;
+          render();
+          showNotification('配置已更新', 'success');
+
+          // 如果已安装，显示成功提示
+          if (isInstalled) {
+            document.getElementById('reloadTip').style.display = 'flex';
+          }
+        } else {
+          showNotification('激活失败', 'error');
+        }
+      } catch (error) {
+        showNotification('激活失败', 'error');
+      }
+    }
+
+    // 弹窗控制
+    function showAddModal() {
+      document.getElementById('modalTitle').textContent = '新增配置方案';
+      document.getElementById('editId').value = '';
+      document.getElementById('name').value = '';
+      document.getElementById('apiUrl').value = '';
+      document.getElementById('apiKey').value = '';
+      document.getElementById('modelName').value = '';
+      document.getElementById('modal').classList.add('show');
+    }
+
+    function showEditModal(id) {
+      const profile = config.profiles.find(p => p.id === id);
+      if (!profile) {
+        showNotification('方案不存在', 'error');
+        return;
+      }
+      document.getElementById('modalTitle').textContent = '编辑配置方案';
+      document.getElementById('editId').value = id;
+      document.getElementById('name').value = profile.name;
+      document.getElementById('apiUrl').value = profile.apiUrl;
+      document.getElementById('apiKey').value = profile.apiKey;
+      document.getElementById('modelName').value = profile.modelName;
+      document.getElementById('modal').classList.add('show');
+    }
+
+    function hideModal() {
+      document.getElementById('modal').classList.remove('show');
+    }
+
+    // 表单提交
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById('editId').value;
+      const profile = {
+        name: document.getElementById('name').value.trim(),
+        apiUrl: document.getElementById('apiUrl').value.trim(),
+        apiKey: document.getElementById('apiKey').value.trim(),
+        modelName: document.getElementById('modelName').value.trim()
+      };
+      if (editId) {
+        await updateProfile(editId, profile);
+      } else {
+        await addProfile(profile);
+      }
+    });
+
+    // 通知
+    function showNotification(message, type = 'success') {
+      const el = document.getElementById('notification');
+      el.textContent = message;
+      el.className = `notification ${type} show`;
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // 工具函数
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+    }
+
+    function maskKey(key) {
+      if (key.length <= 8) return '***';
+      return key.substring(0, 4) + '...' + key.substring(key.length - 4);
+    }
+
+    // 点击弹窗外部关闭
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') hideModal();
+    });
+
+    // ESC 键关闭弹窗
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideModal();
+    });
+
+    // 初始化
+    loadConfig();
+    // 自动检测配置状态
+    checkConfigStatus();
+  </script>
+</body>
+</html>
